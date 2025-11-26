@@ -43,7 +43,7 @@ function Write-FormattedMessage {
     param(
         [Parameter(Mandatory, ValueFromPipeline)]
         [string]$Message,
-        
+
         [Parameter(Mandatory)]
         [ValidateSet('Success', 'Warning', 'Error', 'Info')]
         [string]$Type
@@ -78,13 +78,11 @@ function Invoke-GitCommand {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [string[]]$Arguments,
-        
-        [switch]$SuppressErrors
+        [string[]]$Arguments
     )
-    
+
     $result = git @Arguments 2>&1
-    
+
     return @{
         Output = $result
         Success = $LASTEXITCODE -eq 0
@@ -101,11 +99,11 @@ function Test-GitRepository {
         [Parameter(Mandatory)]
         [string]$Path
     )
-    
+
     if (-not (Test-Path -LiteralPath $Path)) {
         throw "Repository path does not exist: $Path"
     }
-    
+
     Push-Location -LiteralPath $Path
     try {
         $result = Invoke-GitCommand -Arguments @('rev-parse', '--git-dir')
@@ -124,11 +122,11 @@ function Get-DefaultBranch {
         Single responsibility: Determine repository default branch.
     #>
     $result = Invoke-GitCommand -Arguments @('symbolic-ref', 'refs/remotes/origin/HEAD')
-    
+
     if ($result.Success -and $result.Output) {
         return $result.Output -replace '^refs/remotes/origin/', ''
     }
-    
+
     # Fallback: check common remote branches
     $result = Invoke-GitCommand -Arguments @('branch', '-r')
     if ($result.Success) {
@@ -136,7 +134,7 @@ function Get-DefaultBranch {
         if ($remoteBranches -contains 'origin/main') { return 'main' }
         if ($remoteBranches -contains 'origin/master') { return 'master' }
     }
-    
+
     return 'main'
 }
 
@@ -158,9 +156,9 @@ function Invoke-RemoteFetch {
         Single responsibility: Fetch and prune from all remotes.
     #>
     Write-FormattedMessage "Fetching from all remotes..." -Type Info
-    
+
     $result = Invoke-GitCommand -Arguments @('fetch', '--all', '--prune')
-    
+
     if ($result.Success) {
         Write-FormattedMessage "Fetch completed" -Type Success
     } else {
@@ -182,9 +180,9 @@ function Get-BranchAge {
         [Parameter(Mandatory)]
         [string]$BranchName
     )
-    
+
     $result = Invoke-GitCommand -Arguments @('log', '-1', '--format=%ci', $BranchName)
-    
+
     if ($result.Success -and $result.Output) {
         try {
             $commitDate = [DateTime]::Parse($result.Output)
@@ -194,7 +192,7 @@ function Get-BranchAge {
             Write-Warning "Failed to parse commit date for branch '$BranchName': $_"
         }
     }
-    
+
     return [TimeSpan]::Zero
 }
 
@@ -209,13 +207,13 @@ function Get-MergedBranches {
         [Parameter(Mandatory)]
         [string]$TargetBranch
     )
-    
+
     $result = Invoke-GitCommand -Arguments @('branch', '--merged', $TargetBranch)
-    
+
     if ($result.Success) {
         return @($result.Output | ForEach-Object { $_.Trim() -replace '^\* ', '' })
     }
-    
+
     return @()
 }
 
@@ -228,23 +226,23 @@ function Get-RemoteTrackingInfo {
         [Parameter(Mandatory)]
         [string]$BranchName
     )
-    
+
     $remoteResult = Invoke-GitCommand -Arguments @('config', "branch.$BranchName.remote")
     if (-not $remoteResult.Success -or -not $remoteResult.Output) {
         return $null
     }
-    
+
     $mergeResult = Invoke-GitCommand -Arguments @('config', "branch.$BranchName.merge")
     if (-not $mergeResult.Success -or -not $mergeResult.Output) {
         return $null
     }
-    
+
     $trackingBranch = $remoteResult.Output
     $remoteBranch = $mergeResult.Output -replace '^refs/heads/', ''
     $fullRemoteBranch = "$trackingBranch/$remoteBranch"
-    
+
     $verifyResult = Invoke-GitCommand -Arguments @('show-ref', '--verify', '--quiet', "refs/remotes/$fullRemoteBranch")
-    
+
     return @{
         Exists = $verifyResult.Success
         Remote = $trackingBranch
@@ -264,7 +262,7 @@ function Get-CommitHash {
         [Parameter(Mandatory)]
         [string]$Reference
     )
-    
+
     $result = Invoke-GitCommand -Arguments @('rev-parse', $Reference)
     if ($result.Success) {
         return $result.Output
@@ -281,23 +279,23 @@ function Get-CandidateBranches {
         [Parameter(Mandatory)]
         [AllowEmptyCollection()]
         [string[]]$ProtectedBranches,
-        
+
         [Parameter(Mandatory)]
         [AllowEmptyString()]
         [string]$CurrentBranch
     )
-    
+
     $result = Invoke-GitCommand -Arguments @('branch')
-    
+
     if (-not $result.Success) {
         return @()
     }
-    
-    return @($result.Output | 
+
+    return @($result.Output |
         ForEach-Object { $_.Trim() -replace '^\* ', '' } |
         Where-Object {
-            $_ -and 
-            $_ -ne $CurrentBranch -and 
+            $_ -and
+            $_ -ne $CurrentBranch -and
             $ProtectedBranches -notcontains $_
         })
 }
@@ -318,19 +316,19 @@ function Test-BranchDeletionCriteria {
     param(
         [Parameter(Mandatory)]
         [string]$BranchName,
-        
+
         [Parameter(Mandatory)]
         [string]$DefaultBranch,
-        
+
         [Parameter(Mandatory)]
         [hashtable]$Config
     )
-    
+
     $result = @{
         ShouldDelete = $false
         Reason = $null
     }
-    
+
     # Strategy 1: Merged branches
     if ($Config.DeleteMerged) {
         $mergedBranches = Get-MergedBranches -TargetBranch $DefaultBranch
@@ -340,7 +338,7 @@ function Test-BranchDeletionCriteria {
             return $result
         }
     }
-    
+
     # Strategy 2: Orphaned branches
     if ($Config.DeleteOrphaned) {
         $tracking = Get-RemoteTrackingInfo -BranchName $BranchName
@@ -350,14 +348,14 @@ function Test-BranchDeletionCriteria {
             return $result
         }
     }
-    
+
     # Strategy 3: In-sync branches
     if ($Config.DeleteInSync) {
         $tracking = Get-RemoteTrackingInfo -BranchName $BranchName
         if ($tracking -and $tracking.Exists) {
             $localCommit = Get-CommitHash -Reference $BranchName
             $remoteCommit = Get-CommitHash -Reference $tracking.FullName
-            
+
             if ($localCommit -and $remoteCommit -and $localCommit -eq $remoteCommit) {
                 $result.ShouldDelete = $true
                 $result.Reason = "Identical to upstream '$($tracking.FullName)'"
@@ -365,7 +363,7 @@ function Test-BranchDeletionCriteria {
             }
         }
     }
-    
+
     return $result
 }
 
@@ -381,20 +379,20 @@ function Get-BranchAnalysis {
     param(
         [Parameter(Mandatory)]
         [string]$BranchName,
-        
+
         [Parameter(Mandatory)]
         [string]$DefaultBranch,
-        
+
         [Parameter(Mandatory)]
         [int]$MinimumAge,
-        
+
         [Parameter(Mandatory)]
         [hashtable]$DeletionConfig
     )
-    
+
     $age = Get-BranchAge -BranchName $BranchName
     $ageRounded = [math]::Round($age.TotalDays, 1)
-    
+
     if ($age.Days -lt $MinimumAge) {
         return @{
             Branch = $BranchName
@@ -404,9 +402,9 @@ function Get-BranchAnalysis {
             Action = 'Skip'
         }
     }
-    
+
     $criteria = Test-BranchDeletionCriteria -BranchName $BranchName -DefaultBranch $DefaultBranch -Config $DeletionConfig
-    
+
     return @{
         Branch = $BranchName
         Age = $ageRounded
@@ -427,19 +425,19 @@ function Write-BranchAnalysisResult {
         [Parameter(Mandatory)]
         [hashtable]$Analysis
     )
-    
+
     $message = switch ($Analysis.Action) {
         'Skip' { "Skipping $($Analysis.Branch) ($($Analysis.Reason))" }
         'Delete' { "DELETE: $($Analysis.Branch) - $($Analysis.Reason) ($($Analysis.Age) days old)" }
         'Keep' { "KEEP: $($Analysis.Branch) - Keeping ($($Analysis.Age) days old)" }
     }
-    
+
     $type = switch ($Analysis.Action) {
         'Skip' { 'Info' }
         'Delete' { 'Warning' }
         'Keep' { 'Success' }
     }
-    
+
     Write-FormattedMessage $message -Type $type
 }
 
@@ -484,18 +482,18 @@ function Invoke-BranchDeletions {
         [Parameter(Mandatory)]
         [array]$Branches
     )
-    
+
     Write-FormattedMessage "Deleting branches..." -Type Info
-    
+
     $stats = @{
         Deleted = 0
         Failed = 0
         Skipped = 0
     }
-    
+
     foreach ($branch in $Branches) {
         $result = Invoke-BranchDeletion -BranchName $branch.Name
-        
+
         if ($result.Skipped) {
             $stats.Skipped++
         }
@@ -506,7 +504,7 @@ function Invoke-BranchDeletions {
             $stats.Failed++
         }
     }
-    
+
     return $stats
 }
 
@@ -523,7 +521,7 @@ function Get-UserConfirmation {
         [Parameter(Mandatory)]
         [int]$Count
     )
-    
+
     $response = Read-Host "Do you want to delete these $Count branches? (y/N)"
     return $response -match '^y(es)?$'
 }
@@ -537,7 +535,7 @@ function Write-Summary {
         [Parameter(Mandatory)]
         [hashtable]$Stats
     )
-    
+
     Write-SectionHeader "SUMMARY"
     Write-FormattedMessage "Total branches analyzed: $($Stats.Analyzed)" -Type Info
     Write-FormattedMessage "Branches to delete: $($Stats.ToDelete)" -Type Info
@@ -552,11 +550,11 @@ function Write-DeletionResults {
         [Parameter(Mandatory)]
         [hashtable]$Stats
     )
-    
+
     Write-Host ""
     Write-FormattedMessage "Cleanup completed!" -Type Success
     Write-FormattedMessage "  Deleted: $($Stats.Deleted) branches" -Type Success
-    
+
     if ($Stats.Failed -gt 0) {
         Write-FormattedMessage "  Failed: $($Stats.Failed) branches" -Type Warning
     }
@@ -644,26 +642,26 @@ function Invoke-BranchCleanup {
                 })
             }
         }
-        
+
         # Display summary
         Write-Summary -Stats @{
             Analyzed = $candidateBranches.Count
             ToDelete = $branchesToDelete.Count
         }
-        
+
         # Early exit if nothing to delete
         if ($branchesToDelete.Count -eq 0) {
             Write-FormattedMessage "No branches need cleanup!" -Type Success
             return
         }
-        
+
         # Display branches marked for deletion
         Write-Host ""
         Write-FormattedMessage "Branches marked for deletion:" -Type Info
         foreach ($branch in $branchesToDelete) {
             Write-FormattedMessage "  * $($branch.Name) - $($branch.Reason)" -Type Warning
         }
-        
+
         # Handle dry run
         if ($DryRun) {
             Write-Host ""
@@ -671,17 +669,17 @@ function Invoke-BranchCleanup {
             Write-FormattedMessage "To perform the actual cleanup, run with: -DryRun:`$false" -Type Info
             return
         }
-        
+
         # Get user confirmation if interactive
         Write-Host ""
         if ($Interactive -and -not (Get-UserConfirmation -Count $branchesToDelete.Count)) {
             Write-FormattedMessage "Cleanup cancelled by user" -Type Info
             return
         }
-        
+
         # Perform deletions
         $deletionStats = Invoke-BranchDeletions -Branches $branchesToDelete
-        
+
         # Display results
         Write-DeletionResults -Stats $deletionStats
     }
