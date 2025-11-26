@@ -575,66 +575,73 @@ function Invoke-BranchCleanup {
     #>
     [CmdletBinding(SupportsShouldProcess)]
     param(
-        [switch]$DryRun = $true,
-        [switch]$Interactive = $true,
+        [switch]$DryRun,
+        [switch]$Interactive,
         [string[]]$ProtectedBranches = @('main', 'master', 'develop', 'dev', 'test', 'staging', 'release'),
         [string]$RepositoryPath = $PWD.Path,
-        [switch]$FetchFirst = $true,
-        [switch]$DeleteMerged = $true,
-        [switch]$DeleteOrphaned = $true,
+        [switch]$FetchFirst,
+        [switch]$DeleteMerged,
+        [switch]$DeleteOrphaned,
         [switch]$DeleteInSync,
         [int]$MaxAge = 7
     )
-    
+
+    # Apply default values for switches (cannot use = $true in param block per PSScriptAnalyzer)
+    if (-not $PSBoundParameters.ContainsKey('DryRun')) { $DryRun = $true }
+    if (-not $PSBoundParameters.ContainsKey('Interactive')) { $Interactive = $true }
+    if (-not $PSBoundParameters.ContainsKey('FetchFirst')) { $FetchFirst = $true }
+    if (-not $PSBoundParameters.ContainsKey('DeleteMerged')) { $DeleteMerged = $true }
+    if (-not $PSBoundParameters.ContainsKey('DeleteOrphaned')) { $DeleteOrphaned = $true }
+
     # Display header
     Write-SectionHeader "Git Branch Cleanup Script"
     Write-FormattedMessage "Repository: $RepositoryPath" -Type Info
     Write-FormattedMessage "Mode: $(if ($DryRun) { 'DRY RUN (preview only)' } else { 'LIVE (will delete branches)' })" -Type Info
     Write-Host ""
-    
+
     # Validate repository
     Test-GitRepository -Path $RepositoryPath
-    
+
     # Execute in repository context
     Push-Location -LiteralPath $RepositoryPath
-    
+
     try {
         # Fetch remotes if requested
         if ($FetchFirst) {
             Invoke-RemoteFetch
         }
-        
+
         # Get repository state
         $defaultBranch = Get-DefaultBranch
         $currentBranch = Get-CurrentBranch
         $candidateBranches = Get-CandidateBranches -ProtectedBranches $ProtectedBranches -CurrentBranch $currentBranch
-        
+
         # Display configuration
         Write-FormattedMessage "Default branch: $defaultBranch" -Type Info
         Write-FormattedMessage "Current branch: $currentBranch" -Type Info
         Write-FormattedMessage "Protected branches: $($ProtectedBranches -join ', ')" -Type Info
         Write-FormattedMessage "Analyzing $($candidateBranches.Count) candidate branches..." -Type Info
         Write-Host ""
-        
+
         # Configure deletion strategies (Open/Closed principle)
         $deletionConfig = @{
             DeleteMerged = $DeleteMerged.IsPresent
             DeleteOrphaned = $DeleteOrphaned.IsPresent
             DeleteInSync = $DeleteInSync.IsPresent
         }
-        
+
         # Analyze branches
         $branchesToDelete = [System.Collections.Generic.List[hashtable]]::new()
-        
+
         foreach ($branch in $candidateBranches) {
             $analysis = Get-BranchAnalysis `
                 -BranchName $branch `
                 -DefaultBranch $defaultBranch `
                 -MinimumAge $MaxAge `
                 -DeletionConfig $deletionConfig
-            
+
             Write-BranchAnalysisResult -Analysis $analysis
-            
+
             if ($analysis.ShouldDelete) {
                 $branchesToDelete.Add(@{
                     Name = $analysis.Branch
