@@ -450,23 +450,24 @@ function Invoke-BranchDeletion {
     .SYNOPSIS
         Single responsibility: Delete a single branch.
     #>
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory)]
         [string]$BranchName
     )
-    
+
     if (-not $PSCmdlet.ShouldProcess($BranchName, "Delete git branch")) {
         return @{ Success = $false; Skipped = $true }
     }
-    
+
     $result = Invoke-GitCommand -Arguments @('branch', '-D', $BranchName)
-    
+
     if ($result.Success) {
         Write-FormattedMessage "  Deleted $BranchName" -Type Success
     } else {
         Write-FormattedMessage "  Failed to delete $BranchName" -Type Error
     }
-    
+
     return @{
         Success = $result.Success
         Skipped = $false
