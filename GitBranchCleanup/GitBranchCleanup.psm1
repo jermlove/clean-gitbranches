@@ -2,10 +2,10 @@
 
 <#
 .SYNOPSIS
-    Cleans up local git branches based on configurable criteria.
+    Git branch cleanup module using SOLID principles.
 
 .DESCRIPTION
-    Analyzes and optionally deletes stale local git branches using SOLID principles:
+    Provides functionality to analyze and optionally delete stale local git branches using SOLID principles:
     - Single Responsibility: Each function has one clear purpose
     - Open/Closed: Extensible through strategy pattern for deletion rules
     - Liskov Substitution: Consistent interfaces for all branch analyzers
