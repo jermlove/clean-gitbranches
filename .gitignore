@@ -1,0 +1,49 @@
+# .gitignore for PowerShell module
+
+# Build artifacts
+*.log
+*.dll
+*.pdb
+
+# Test results
+TestResults/
+*.trx
+
+# Coverage reports
+coverage/
+*.coverage.xml
+
+# PowerShell Gallery artifacts
+*.nupkg
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# JetBrains Rider
+.idea/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+
+# User-specific files
+*.user
+*.suo
+
+# Module build output
+output/
+build/
