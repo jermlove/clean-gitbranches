@@ -27,7 +27,10 @@ GitBranchCleanup/
 ├── CONTRIBUTING.md                      # Contribution guidelines
 ├── EXAMPLES.md                          # Usage examples
 ├── LICENSE                              # MIT License
-└── README.md                            # Main documentation
+├── PSScriptAnalyzerSettings.psd1        # Code quality rules configuration
+├── PROJECT-STRUCTURE.md                 # This file
+├── README.md                            # Main documentation
+└── SETUP-COMPLETE.md                    # Setup completion notes
 ```
 
 ## 🎯 Module Architecture

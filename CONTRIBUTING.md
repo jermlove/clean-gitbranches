@@ -117,6 +117,26 @@ Describe 'Function-Name' {
 }
 ```
 
+### Code Quality
+
+This project uses PSScriptAnalyzer to maintain code quality. Configuration is in `PSScriptAnalyzerSettings.psd1`.
+
+**Intentionally suppressed rules:**
+- `PSAvoidUsingWriteHost` - Write-Host is used for colored user-facing output in this interactive tool
+- `PSUseSingularNouns` - Plural nouns are appropriate for internal functions returning collections
+- `PSUseProcessBlockForPipelineCommand` - Simple pipeline parameter doesn't require process block
+
+**Run analysis locally:**
+```powershell
+# Install PSScriptAnalyzer
+Install-Module -Name PSScriptAnalyzer -Force
+
+# Run analysis
+Invoke-ScriptAnalyzer -Path ./GitBranchCleanup -Recurse -Settings ./PSScriptAnalyzerSettings.psd1
+```
+
+The CI/CD pipeline will fail if PSScriptAnalyzer finds any errors or warnings (after applying the settings file suppressions).
+
 ### Documentation
 
 - Update README.md for user-facing changes
