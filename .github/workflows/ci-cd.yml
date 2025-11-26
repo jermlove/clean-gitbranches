@@ -1,0 +1,90 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  release:
+    types: [ published ]
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Install PowerShell (Ubuntu/macOS)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          sudo apt-get update
+          sudo apt-get install -y powershell
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          brew install --cask powershell
+        fi
+        
+    - name: Install Pester
+      shell: pwsh
+      run: |
+        Set-PSRepository PSGallery -InstallationPolicy Trusted
+        Install-Module -Name Pester -MinimumVersion 5.0.0 -Force -SkipPublisherCheck
+        
+    - name: Run tests
+      shell: pwsh
+      run: |
+        Import-Module ./GitBranchCleanup/GitBranchCleanup.psd1
+        Invoke-Pester ./Tests -PassThru
+        
+    - name: Test module import
+      shell: pwsh
+      run: |
+        Import-Module ./GitBranchCleanup/GitBranchCleanup.psd1 -Force
+        Get-Command -Module GitBranchCleanup
+        
+  lint:
+    name: PowerShell Script Analyzer
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Install PSScriptAnalyzer
+      shell: pwsh
+      run: |
+        Set-PSRepository PSGallery -InstallationPolicy Trusted
+        Install-Module -Name PSScriptAnalyzer -Force
+        
+    - name: Run PSScriptAnalyzer
+      shell: pwsh
+      run: |
+        $results = Invoke-ScriptAnalyzer -Path ./GitBranchCleanup -Recurse -ReportSummary
+        if ($results) {
+          $results | Format-Table -AutoSize
+          exit 1
+        }
+        
+  publish:
+    name: Publish to PowerShell Gallery
+    needs: [test, lint]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Publish module
+      shell: pwsh
+      env:
+        NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+      run: |
+        Publish-Module -Path ./GitBranchCleanup -NuGetApiKey $env:NUGET_API_KEY -Verbose
