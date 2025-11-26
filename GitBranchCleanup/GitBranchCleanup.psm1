@@ -19,19 +19,6 @@
     - Open/Closed: Deletion criteria are extensible without modifying core logic
 #>
 
-[CmdletBinding(SupportsShouldProcess)]
-param(
-    [switch]$DryRun = $true,
-    [switch]$Interactive = $true,
-    [string[]]$ProtectedBranches = @('main', 'master', 'develop', 'dev', 'test', 'staging', 'release'),
-    [string]$RepositoryPath = $PWD.Path,
-    [switch]$FetchFirst = $true,
-    [switch]$DeleteMerged = $true,
-    [switch]$DeleteOrphaned = $true,
-    [switch]$DeleteInSync,
-    [int]$MaxAge = 7
-)
-
 #region Core Types and Constants
 
 $script:MessageTypes = @{
@@ -587,6 +574,18 @@ function Invoke-BranchCleanup {
         Coordinates the cleanup process by delegating to specialized functions.
         Each step is handled by a focused, single-purpose function.
     #>
+    [CmdletBinding(SupportsShouldProcess)]
+    param(
+        [switch]$DryRun = $true,
+        [switch]$Interactive = $true,
+        [string[]]$ProtectedBranches = @('main', 'master', 'develop', 'dev', 'test', 'staging', 'release'),
+        [string]$RepositoryPath = $PWD.Path,
+        [switch]$FetchFirst = $true,
+        [switch]$DeleteMerged = $true,
+        [switch]$DeleteOrphaned = $true,
+        [switch]$DeleteInSync,
+        [int]$MaxAge = 7
+    )
     
     # Display header
     Write-SectionHeader "Git Branch Cleanup Script"
