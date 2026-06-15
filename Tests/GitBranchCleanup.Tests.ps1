@@ -22,7 +22,7 @@ Describe 'GitBranchCleanup Module' {
         It 'Should have valid manifest' {
             $manifest = Test-ModuleManifest -Path (Join-Path (Join-Path (Join-Path $PSScriptRoot '..') 'GitBranchCleanup') 'GitBranchCleanup.psd1')
             $manifest | Should -Not -BeNullOrEmpty
-            $manifest.Version | Should -Be '1.0.0'
+            $manifest.Version | Should -Be '1.1.0'
         }
     }
     

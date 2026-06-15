@@ -279,6 +279,6 @@ Publish-Module -Path ./GitBranchCleanup -NuGetApiKey "YOUR-API-KEY"
 **🎯 Your module is now ready for GitHub and PowerShell Gallery!**
 
 **Repository Location**: `C:\Dev\_scripts\clean-gitbranches`  
-**Module Version**: 1.0.0  
+**Module Version**: 1.1.0  
 **License**: MIT  
 **Status**: ✅ Production Ready

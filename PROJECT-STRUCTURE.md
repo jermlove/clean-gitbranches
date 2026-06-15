@@ -111,7 +111,7 @@ User → Invoke-BranchCleanup
 | Property | Value |
 |----------|-------|
 | Module Name | GitBranchCleanup |
-| Version | 1.0.0 |
+| Version | 1.1.0 |
 | PowerShell | 5.1+ |
 | License | MIT |
 | Author | Community Contributors |

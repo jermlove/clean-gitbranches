@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-06-15
+
+### Fixed
+- `Get-CandidateBranches` now uses `git for-each-ref` instead of parsing
+  `git branch` output, so branches checked out in a linked worktree (`+ `
+  marker) and the detached-HEAD pseudo-entry no longer leak through as
+  bogus branch names and crash with `fatal: ambiguous argument`.
+- `Get-MergedBranches` strips both the `* ` (current) and `+ ` (worktree)
+  status markers.
+
+### Added
+- New private `Get-WorktreeBranches` helper; worktree-checked-out branches
+  are excluded from cleanup candidates (git cannot delete them).
+- Pester 5 regression tests covering worktree and detached-HEAD parsing.
+- 5.1-compatible `Join-Path` calls in the test suite so it runs on both
+  Windows PowerShell 5.1 and PowerShell 7.
+
 ## [1.0.0] - 2025-11-26
 
 ### Added

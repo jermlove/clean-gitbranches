@@ -3,7 +3,7 @@
     RootModule = 'GitBranchCleanup.psm1'
 
     # Version number of this module.
-    ModuleVersion = '1.0.0'
+    ModuleVersion = '1.1.0'
 
     # ID used to uniquely identify this module
     GUID = 'a7d9c4e5-f2b3-4a1d-9e8f-6c5b4a3d2e1f'
@@ -51,7 +51,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Initial release with SOLID principles and DRY design patterns.'
+            ReleaseNotes = 'Fix branch parsing for worktree-checked-out and detached-HEAD repositories; add Pester 5 regression coverage.'
 
             # Prerelease string of this module
             # Prerelease = 'preview'
