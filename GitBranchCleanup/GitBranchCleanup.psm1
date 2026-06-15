@@ -211,7 +211,8 @@ function Get-MergedBranches {
     $result = Invoke-GitCommand -Arguments @('branch', '--merged', $TargetBranch)
 
     if ($result.Success) {
-        return @($result.Output | ForEach-Object { $_.Trim() -replace '^\* ', '' })
+        # Strip the leading status marker git prepends ('* ' current, '+ ' worktree).
+        return @($result.Output | ForEach-Object { "$_".Trim() -replace '^[*+]\s+', '' })
     }
 
     return @()
@@ -270,10 +271,36 @@ function Get-CommitHash {
     return $null
 }
 
+function Get-WorktreeBranches {
+    <#
+    .SYNOPSIS
+        Single responsibility: List local branches checked out in any worktree.
+    .DESCRIPTION
+        Branches checked out in a linked worktree cannot be deleted (git refuses),
+        so they must be excluded from cleanup candidates.
+    #>
+    $result = Invoke-GitCommand -Arguments @('worktree', 'list', '--porcelain')
+
+    if (-not $result.Success) {
+        return @()
+    }
+
+    return @($result.Output |
+        Where-Object { "$_" -match '^branch\s+refs/heads/' } |
+        ForEach-Object { "$_" -replace '^branch\s+refs/heads/', '' } |
+        ForEach-Object { $_.Trim() })
+}
+
 function Get-CandidateBranches {
     <#
     .SYNOPSIS
         Single responsibility: Filter branches eligible for cleanup.
+    .DESCRIPTION
+        Uses for-each-ref for clean branch names, avoiding the status markers
+        ('* ' current, '+ ' worktree) and the '(HEAD detached ...)' pseudo-entry
+        that 'git branch' emits and that previously leaked through as bogus branch
+        names. Branches checked out in a linked worktree are excluded because git
+        cannot delete them.
     #>
     param(
         [Parameter(Mandatory)]
@@ -285,18 +312,21 @@ function Get-CandidateBranches {
         [string]$CurrentBranch
     )
 
-    $result = Invoke-GitCommand -Arguments @('branch')
+    $result = Invoke-GitCommand -Arguments @('for-each-ref', '--format=%(refname:short)', 'refs/heads')
 
     if (-not $result.Success) {
         return @()
     }
 
+    $worktreeBranches = Get-WorktreeBranches
+
     return @($result.Output |
-        ForEach-Object { $_.Trim() -replace '^\* ', '' } |
+        ForEach-Object { "$_".Trim() } |
         Where-Object {
             $_ -and
             $_ -ne $CurrentBranch -and
-            $ProtectedBranches -notcontains $_
+            $ProtectedBranches -notcontains $_ -and
+            $worktreeBranches -notcontains $_
         })
 }
 
